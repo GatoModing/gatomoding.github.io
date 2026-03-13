@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Museo Marino AR</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --deep: #020d18;
+      --abyss: #041525;
+      --mid: #072a45;
+      --surface: #0e4a72;
+      --glow: #00c8ff;
+      --accent: #00ffc8;
+      --foam: #cceeff;
+      --text: #d6f0ff;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--deep);
+      color: var(--text);
+      font-family: 'Jost', sans-serif;
+      font-weight: 300;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* Custom cursor */
+    .cursor {
+      position: fixed;
+      width: 12px; height: 12px;
+      background: var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: transform 0.1s, width 0.2s, height 0.2s, background 0.2s;
+      mix-blend-mode: screen;
+    }
+    .cursor-ring {
+      position: fixed;
+      width: 36px; height: 36px;
+      border: 1px solid rgba(0,200,255,0.4);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: transform 0.18s ease, width 0.3s, height 0.3s;
+    }
+
+    /* Bubbles background */
+    .bubbles {
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .bubble {
+      position: absolute;
+      bottom: -60px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(0,200,255,0.18), rgba(0,200,255,0.03));
+      border: 1px solid rgba(0,200,255,0.12);
+      animation: rise linear infinite;
+    }
+    @keyframes rise {
+      0% { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 0.4; }
+      100% { transform: translateY(-110vh) translateX(var(--drift)) scale(0.7); opacity: 0; }
+    }
+
+    /* Light rays */
+    .rays {
+      position: fixed;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200%;
+      height: 80vh;
+      pointer-events: none;
+      z-index: 0;
+      background: repeating-conic-gradient(
+        from 260deg at 50% 0%,
+        rgba(0,180,255,0.04) 0deg,
+        transparent 2deg,
+        transparent 8deg,
+        rgba(0,180,255,0.03) 10deg
+      );
+      animation: sway 12s ease-in-out infinite alternate;
+    }
+    @keyframes sway {
+      from { transform: translateX(-50%) rotate(-3deg); }
+      to   { transform: translateX(-50%) rotate(3deg); }
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2rem 3rem;
+      background: linear-gradient(to bottom, rgba(2,13,24,0.95), transparent);
+      backdrop-filter: blur(2px);
+    }
+    .nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      letter-spacing: 0.05em;
+      color: var(--foam);
+    }
+    .nav-logo span { color: var(--glow); font-style: italic; }
+    .nav-links { display: flex; gap: 2rem; }
+    .nav-links a {
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.8rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      opacity: 0.7;
+      transition: opacity 0.2s, color 0.2s;
+    }
+    .nav-links a:hover { opacity: 1; color: var(--glow); }
+
+    /* HERO */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6rem 2rem 4rem;
+      z-index: 1;
+    }
+    .hero-eyebrow {
+      font-size: 0.72rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--glow);
+      opacity: 0.8;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 1s ease both;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(3rem, 8vw, 7rem);
+      line-height: 1.05;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 1s 0.2s ease both;
+    }
+    .hero h1 em {
+      font-style: italic;
+      color: var(--glow);
+      display: block;
+    }
+    .hero-sub {
+      font-size: 1rem;
+      opacity: 0.6;
+      max-width: 480px;
+      line-height: 1.8;
+      margin-bottom: 3rem;
+      animation: fadeUp 1s 0.4s ease both;
+    }
+    .hero-cta {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeUp 1s 0.6s ease both;
+    }
+    .btn-primary {
+      padding: 0.85rem 2.2rem;
+      background: var(--glow);
+      color: var(--deep);
+      border: none;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      cursor: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 30px rgba(0,200,255,0.5);
+    }
+    .btn-secondary {
+      padding: 0.85rem 2.2rem;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(0,200,255,0.3);
+      font-family: 'Jost', sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      cursor: none;
+      transition: border-color 0.2s, color 0.2s;
+      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    }
+    .btn-secondary:hover { border-color: var(--glow); color: var(--glow); }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      opacity: 0.4;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      animation: fadeUp 1s 1s ease both;
+    }
+    .scroll-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, var(--glow), transparent);
+      animation: scrollPulse 2s ease-in-out infinite;
+    }
+    @keyframes scrollPulse {
+      0%, 100% { opacity: 0.3; transform: scaleY(1); }
+      50% { opacity: 1; transform: scaleY(1.2); }
+    }
+
+    /* SECTION */
+    section {
+      position: relative;
+      z-index: 1;
+    }
+    .section-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+
+    /* CÓMO FUNCIONA */
+    .how {
+      padding: 8rem 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .how-header { text-align: center; margin-bottom: 5rem; }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2rem;
+    }
+    .step {
+      background: rgba(14,74,114,0.15);
+      border: 1px solid rgba(0,200,255,0.1);
+      padding: 2.5rem 2rem;
+      position: relative;
+      transition: border-color 0.3s, transform 0.3s;
+      clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+    }
+    .step:hover { border-color: rgba(0,200,255,0.35); transform: translateY(-4px); }
+    .step-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 3.5rem;
+      font-weight: 700;
+      color: rgba(0,200,255,0.12);
+      position: absolute;
+      top: 1rem; right: 1.5rem;
+      line-height: 1;
+    }
+    .step-icon { font-size: 2rem; margin-bottom: 1rem; }
+    .step h3 { font-size: 1rem; font-weight: 500; color: var(--foam); margin-bottom: 0.7rem; }
+    .step p { font-size: 0.85rem; opacity: 0.6; line-height: 1.7; }
+
+    /* ANIMALS GRID */
+    .animals-section {
+      padding: 6rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .animals-header { text-align: center; margin-bottom: 4rem; }
+    .animals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    .animal-card {
+      position: relative;
+      background: linear-gradient(135deg, rgba(7,42,69,0.6), rgba(4,21,37,0.8));
+      border: 1px solid rgba(0,200,255,0.12);
+      overflow: hidden;
+      transition: transform 0.35s, border-color 0.35s;
+      clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+      cursor: none;
+    }
+    .animal-card:hover { transform: translateY(-6px); border-color: rgba(0,200,255,0.4); }
+    .animal-card:hover .card-glow { opacity: 1; }
+    .card-glow {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(0,200,255,0.08), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .card-preview {
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .card-preview::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 40%, rgba(4,21,37,0.8));
+    }
+    .card-body { padding: 1.5rem; }
+    .card-tag {
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--glow);
+      margin-bottom: 0.5rem;
+    }
+    .card-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
+      color: #fff;
+      margin-bottom: 0.4rem;
+    }
+    .card-scientific {
+      font-size: 0.78rem;
+      font-style: italic;
+      opacity: 0.45;
+      margin-bottom: 1rem;
+    }
+    .card-desc { font-size: 0.83rem; opacity: 0.6; line-height: 1.7; margin-bottom: 1.5rem; }
+    .card-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--glow);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(0,200,255,0.2);
+      padding-bottom: 2px;
+      transition: border-color 0.2s, gap 0.2s;
+      cursor: none;
+    }
+    .card-btn:hover { border-color: var(--glow); gap: 0.8rem; }
+
+    /* AR BANNER */
+    .ar-banner {
+      margin: 4rem 2rem;
+      max-width: 1100px;
+      margin-left: auto;
+      margin-right: auto;
+      background: linear-gradient(135deg, rgba(0,200,255,0.08), rgba(0,255,200,0.04));
+      border: 1px solid rgba(0,200,255,0.2);
+      padding: 4rem 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+      flex-wrap: wrap;
+      clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
+    }
+    .ar-banner-text h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      color: #fff;
+      margin-bottom: 0.7rem;
+    }
+    .ar-banner-text p { font-size: 0.9rem; opacity: 0.6; max-width: 400px; line-height: 1.7; }
+    .ar-badge {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: rgba(0,200,255,0.05);
+      border: 1px solid rgba(0,200,255,0.2);
+      padding: 1rem 1.5rem;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+    }
+    .ar-badge-icon { font-size: 1.8rem; }
+
+    /* FOOTER */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 3rem;
+      border-top: 1px solid rgba(0,200,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    footer .logo {
+      font-family: 'Playfair Display', serif;
+      color: var(--foam);
+    }
+    footer .logo span { color: var(--glow); font-style: italic; }
+    footer p { font-size: 0.78rem; opacity: 0.35; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Depth line */
+    .depth-line {
+      position: fixed;
+      left: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      z-index: 50;
+      opacity: 0.3;
+    }
+    .depth-line span { font-size: 0.6rem; letter-spacing: 0.15em; writing-mode: vertical-rl; color: var(--glow); }
+    .depth-line::before, .depth-line::after {
+      content: '';
+      display: block;
+      width: 1px;
+      height: 60px;
+      background: linear-gradient(to bottom, transparent, var(--glow));
+    }
+    .depth-line::after { background: linear-gradient(to bottom, var(--glow), transparent); }
+
+    @media (max-width: 768px) {
+      nav { padding: 1rem 1.5rem; }
+      .nav-links { display: none; }
+      .depth-line { display: none; }
+      .ar-banner { padding: 2rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cursor" id="cursor"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <div class="bubbles" id="bubbles"></div>
+  <div class="rays"></div>
+
+  <div class="depth-line"><span>PROFUNDIDAD</span></div>
+
+  <nav>
+    <div class="nav-logo">Museo <span>Marino</span> AR</div>
+    <div class="nav-links">
+      <a href="#animales">Colección</a>
+      <a href="#como">Cómo funciona</a>
+      <a href="ar.html">Experiencia AR</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <p class="hero-eyebrow">✦ Realidad Aumentada · Fauna Marina ✦</p>
+    <h1>El océano<em>en tus manos</em></h1>
+    <p class="hero-sub">Explora cinco especies del fondo marino en realidad aumentada. Apunta tu cámara a los marcadores y deja que los animales cobren vida.</p>
+    <div class="hero-cta">
+      <a href="ar.html" class="btn-primary">Iniciar experiencia AR</a>
+      <a href="#animales" class="btn-secondary">Ver colección</a>
+    </div>
+    <div class="scroll-hint">
+      <div class="scroll-line"></div>
+      Explorar
+    </div>
+  </section>
+
+  <!-- CÓMO FUNCIONA -->
+  <section class="how" id="como">
+    <div class="how-header">
+      <p class="section-label">Guía rápida</p>
+      <h2 class="section-title">¿Cómo funciona?</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-icon">🖨️</div>
+        <h3>Imprime los marcadores</h3>
+        <p>Descarga e imprime los marcadores de cada animal. Puedes pegarlos en la pared o tenerlos en una hoja.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-icon">📱</div>
+        <h3>Abre la experiencia</h3>
+        <p>Desde tu celular o computadora, abre la sección AR en tu navegador. No necesitas instalar nada.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-icon">📷</div>
+        <h3>Apunta la cámara</h3>
+        <p>Enfoca el marcador con tu cámara y el animal marino aparecerá en 3D encima del marcador.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-icon">🌊</div>
+        <h3>Explora y aprende</h3>
+        <p>Muévete alrededor del animal para observarlo desde todos los ángulos. Lee su ficha informativa.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANIMALS -->
+  <section class="animals-section" id="animales">
+    <div class="animals-header">
+      <p class="section-label">Colección permanente</p>
+      <h2 class="section-title">Cinco especies del abismo</h2>
+    </div>
+    <div class="animals-grid">
+
+      <div class="animal-card">
+        <div class="card-glow"></div>
+        <div class="card-preview">🦈</div>
+        <div class="card-body">
+          <p class="card-tag">Depredador · Pelágico</p>
+          <h3 class="card-name">Tiburón Blanco</h3>
+          <p class="card-scientific">Carcharodon carcharias</p>
+          <p class="card-desc">El mayor depredador del océano. Puede detectar una gota de sangre en 100 litros de agua y alcanzar los 6 metros de longitud.</p>
+          <a href="ar.html#shark" class="card-btn">Ver en AR →</a>
+        </div>
+      </div>
+
+      <div class="animal-card">
+        <div class="card-glow"></div>
+        <div class="card-preview">🐙</div>
+        <div class="card-body">
+          <p class="card-tag">Cefalópodo · Bentónico</p>
+          <h3 class="card-name">Pulpo Común</h3>
+          <p class="card-scientific">Octopus vulgaris</p>
+          <p class="card-desc">Maestro del camuflaje con tres corazones y sangre azul. Capaz de resolver problemas complejos y abrir frascos con tapa.</p>
+          <a href="ar.html#octopus" class="card-btn">Ver en AR →</a>
+        </div>
+      </div>
+
+      <div class="animal-card">
+        <div class="card-glow"></div>
+        <div class="card-preview">🐢</div>
+        <div class="card-body">
+          <p class="card-tag">Reptil · Migratorio</p>
+          <h3 class="card-name">Tortuga Verde</h3>
+          <p class="card-scientific">Chelonia mydas</p>
+          <p class="card-desc">Viaja miles de kilómetros entre sus zonas de alimentación y reproducción. Puede vivir más de 80 años en libertad.</p>
+          <a href="ar.html#turtle" class="card-btn">Ver en AR →</a>
+        </div>
+      </div>
+
+      <div class="animal-card">
+        <div class="card-glow"></div>
+        <div class="card-preview">🐠</div>
+        <div class="card-body">
+          <p class="card-tag">Pez · Arrecifal</p>
+          <h3 class="card-name">Pez Payaso</h3>
+          <p class="card-scientific">Amphiprioninae</p>
+          <p class="card-desc">Vive en simbiosis con la anémona. Todos nacen machos y el dominante puede cambiar de sexo para convertirse en hembra.</p>
+          <a href="ar.html#clownfish" class="card-btn">Ver en AR →</a>
+        </div>
+      </div>
+
+      <div class="animal-card">
+        <div class="card-glow"></div>
+        <div class="card-preview">🦀</div>
+        <div class="card-body">
+          <p class="card-tag">Crustáceo · Bentónico</p>
+          <h3 class="card-name">Cangrejo Azul</h3>
+          <p class="card-scientific">Callinectes sapidus</p>
+          <p class="card-desc">Su sangre contiene hemocianina con cobre, lo que le da su característico color azul. Es fundamental en los ecosistemas costeros.</p>
+          <a href="ar.html#crab" class="card-btn">Ver en AR →</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- AR BANNER -->
+  <div class="ar-banner">
+    <div class="ar-banner-text">
+      <h2>Experimenta la fauna marina en tu espacio</h2>
+      <p>Sin apps. Sin descargas. Solo abre el link, apunta tu cámara y deja que el océano entre en tu mundo.</p>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:1rem; align-items:flex-end;">
+      <a href="ar.html" class="btn-primary">Abrir cámara AR</a>
+      <a href="markers.html" class="btn-secondary">Descargar marcadores</a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="logo">Museo <span>Marino</span> AR</div>
+    <p>Experiencia interactiva · Realidad Aumentada Web</p>
+  </footer>
+
+  <script>
+    // Custom cursor
+    const cursor = document.getElementById('cursor');
+    const ring = document.getElementById('cursorRing');
+    let mx = 0, my = 0, rx = 0, ry = 0;
+    document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+    function animateCursor() {
+      cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
+      rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
+      ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+      requestAnimationFrame(animateCursor);
+    }
+    animateCursor();
+    document.querySelectorAll('a, button').forEach(el => {
+      el.addEventListener('mouseenter', () => { cursor.style.width = '20px'; cursor.style.height = '20px'; });
+      el.addEventListener('mouseleave', () => { cursor.style.width = '12px'; cursor.style.height = '12px'; });
+    });
+
+    // Bubbles
+    const container = document.getElementById('bubbles');
+    for (let i = 0; i < 28; i++) {
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      const size = Math.random() * 18 + 4;
+      b.style.cssText = `
+        width:${size}px; height:${size}px;
+        left:${Math.random()*100}%;
+        animation-duration:${Math.random()*20+12}s;
+        animation-delay:${Math.random()*20}s;
+        --drift:${(Math.random()-0.5)*80}px;
+      `;
+      container.appendChild(b);
+    }
+
+    // Fade-in on scroll
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.style.opacity = '1'; e.target.style.transform = 'translateY(0)'; } });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.animal-card, .step').forEach(el => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(30px)';
+      el.style.transition = 'opacity 0.7s ease, transform 0.7s ease, border-color 0.35s';
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>
