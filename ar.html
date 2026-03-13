@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>Experiencia AR · Museo Marino</title>
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --glow: #00c8ff;
+      --accent: #00ffc8;
+      --deep: #020d18;
+      --text: #d6f0ff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Jost', sans-serif;
+    }
+
+    /* ── A-Frame ocupa TODO el viewport ── */
+    a-scene {
+      position: fixed !important;
+      top: 0; left: 0;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 1;
+    }
+
+    /* Fuerza el video de cámara a llenar la pantalla */
+    a-scene canvas,
+    #arjs-video,
+    .a-canvas {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      object-fit: cover !important;
+      z-index: 1 !important;
+    }
+
+    /* ── UI encima de la escena ── */
+    #ui {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Top bar mínima */
+    #top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2rem 1.5rem;
+      background: linear-gradient(to bottom, rgba(2,13,24,0.75) 0%, transparent 100%);
+      pointer-events: all;
+    }
+    #top-bar a {
+      color: rgba(255,255,255,0.6);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    #top-bar a:hover { color: var(--glow); }
+    #top-bar .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.85);
+      font-style: italic;
+    }
+
+    /* ── Panel de info del animal (abajo) ── */
+    #animal-info {
+      padding: 2rem 1.8rem 2.2rem;
+      background: linear-gradient(to top, rgba(2,13,24,0.97) 55%, rgba(2,13,24,0.7) 85%, transparent 100%);
+      transition: opacity 0.6s cubic-bezier(.4,0,.2,1), transform 0.6s cubic-bezier(.4,0,.2,1);
+      opacity: 0;
+      transform: translateY(28px);
+      border-top: 1px solid rgba(0,200,255,0.08);
+    }
+    #animal-info.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .info-tag {
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--glow);
+      margin-bottom: 0.5rem;
+      opacity: 0.85;
+    }
+    .info-name {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 5.5vw, 2.5rem);
+      color: #fff;
+      line-height: 1.05;
+      margin-bottom: 0.25rem;
+    }
+    .info-sci {
+      font-size: 0.82rem;
+      font-style: italic;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 0;
+    }
+    .info-divider {
+      width: 36px;
+      height: 1px;
+      background: linear-gradient(to right, var(--glow), transparent);
+      margin: 1rem 0;
+    }
+    .info-desc {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.65);
+      line-height: 1.8;
+      max-width: 540px;
+    }
+
+    /* sin scan hint */
+
+    /* Status dot */
+    #status-dot {
+      position: fixed;
+      top: 1.1rem;
+      right: 1.5rem;
+      z-index: 101;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.45);
+      pointer-events: none;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+
+    /* Ripple al detectar marcador */
+    #ripple {
+      position: fixed;
+      pointer-events: none;
+      z-index: 98;
+      border-radius: 50%;
+      border: 2px solid var(--glow);
+      width: 60px; height: 60px;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%) scale(0);
+      opacity: 0;
+    }
+    #ripple.animate {
+      animation: rippleOut 0.7s ease-out forwards;
+    }
+    @keyframes rippleOut {
+      0%   { transform: translate(-50%,-50%) scale(0.5); opacity: 0.8; }
+      100% { transform: translate(-50%,-50%) scale(6);   opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════
+       A-FRAME AR SCENE — cámara completa
+  ══════════════════════════════════ -->
+  <a-scene
+    embedded
+    arjs="sourceType: webcam;
+          debugUIEnabled: false;
+          detectionMode: mono_and_matrix;
+          matrixCodeType: 3x3;
+          trackingMethod: best;"
+    renderer="logarithmicDepthBuffer: true; antialias: true; alpha: true;"
+    vr-mode-ui="enabled: false"
+  >
+    <a-assets timeout="30000">
+      <a-asset-item id="shark-model"     src="models/shark.glb"></a-asset-item>
+      <a-asset-item id="octopus-model"   src="models/octopus.glb"></a-asset-item>
+      <a-asset-item id="turtle-model"    src="models/turtle.glb"></a-asset-item>
+      <a-asset-item id="clownfish-model" src="models/clownfish.glb"></a-asset-item>
+      <a-asset-item id="crab-model"      src="models/crab.glb"></a-asset-item>
+    </a-assets>
+
+    <!-- ── TIBURÓN · Marcador HIRO ── -->
+    <a-marker preset="hiro" id="m-shark"
+      emitevents="true"
+      smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+
+      <a-entity
+        gltf-model="#shark-model"
+        scale="0.5 0.5 0.5"
+        position="0 0.5 0"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear">
+      </a-entity>
+    </a-marker>
+
+    <!-- ── PULPO · Marcador KANJI ── -->
+    <a-marker preset="kanji" id="m-octopus"
+      emitevents="true"
+      smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+
+      <a-entity
+        gltf-model="#octopus-model"
+        scale="0.4 0.4 0.4"
+        position="0 0.3 0"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 7000; easing: linear">
+      </a-entity>
+    </a-marker>
+
+    <!-- ── TORTUGA · Matrix 0 ── -->
+    <a-marker type="matrix" value="0" id="m-turtle"
+      emitevents="true"
+      smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+
+      <a-entity
+        gltf-model="#turtle-model"
+        scale="0.5 0.5 0.5"
+        position="0 0.4 0"
+        animation="property: position; from: 0 0.4 0; to: 0 0.9 0; dir: alternate; loop: true; dur: 3000; easing: easeInOutSine">
+      </a-entity>
+    </a-marker>
+
+    <!-- ── PEZ PAYASO · Matrix 1 ── -->
+    <a-marker type="matrix" value="1" id="m-clownfish"
+      emitevents="true"
+      smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+
+      <a-entity
+        gltf-model="#clownfish-model"
+        scale="0.4 0.4 0.4"
+        position="0 0.4 0"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear">
+      </a-entity>
+    </a-marker>
+
+    <!-- ── CANGREJO · Matrix 2 ── -->
+    <a-marker type="matrix" value="2" id="m-crab"
+      emitevents="true"
+      smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+
+      <a-entity
+        gltf-model="#crab-model"
+        scale="0.5 0.5 0.5"
+        position="0 0.3 0"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 5500; easing: linear">
+      </a-entity>
+    </a-marker>
+
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <!-- ══════════════════════════════════
+       UI OVERLAY
+  ══════════════════════════════════ -->
+
+  <div id="ripple"></div>
+  <div id="status-dot"><div class="dot"></div>AR</div>
+
+  <!-- UI principal -->
+  <div id="ui">
+    <div id="top-bar">
+      <a href="index.html">← Museo</a>
+      <span class="logo">Museo Marino</span>
+      <a href="markers.html">Marcadores</a>
+    </div>
+
+    <div id="animal-info">
+      <p class="info-tag"   id="a-tag"></p>
+      <h2 class="info-name" id="a-name"></h2>
+      <p class="info-sci"   id="a-sci"></p>
+      <div class="info-divider"></div>
+      <p class="info-desc"  id="a-desc"></p>
+    </div>
+  </div>
+
+  <script>
+    const ANIMALS = {
+      shark:     { tag: "Depredador · Pelágico",   name: "Tiburón Blanco",  sci: "Carcharodon carcharias", desc: "El mayor depredador del océano. Puede detectar una gota de sangre en 100 litros de agua y alcanzar los 6 metros de longitud." },
+      octopus:   { tag: "Cefalópodo · Bentónico",  name: "Pulpo Común",     sci: "Octopus vulgaris",       desc: "Maestro del camuflaje con tres corazones y sangre azul. Capaz de resolver problemas complejos y abrir frascos con tapa." },
+      turtle:    { tag: "Reptil · Migratorio",     name: "Tortuga Verde",   sci: "Chelonia mydas",         desc: "Viaja miles de kilómetros entre zonas de alimentación y reproducción. Puede vivir más de 80 años en libertad." },
+      clownfish: { tag: "Pez · Arrecifal",         name: "Pez Payaso",      sci: "Amphiprioninae",         desc: "Vive en simbiosis con la anémona. Todos nacen machos y el dominante puede cambiar de sexo para convertirse en hembra." },
+      crab:      { tag: "Crustáceo · Bentónico",   name: "Cangrejo Azul",   sci: "Callinectes sapidus",    desc: "Sangre azul por hemocianina con cobre. Fundamental en los ecosistemas costeros." }
+    };
+
+    const MARKER_MAP = {
+      'm-shark': 'shark', 'm-octopus': 'octopus',
+      'm-turtle': 'turtle', 'm-clownfish': 'clownfish', 'm-crab': 'crab'
+    };
+
+    const infoPanel = document.getElementById('animal-info');
+    const rippleEl  = document.getElementById('ripple');
+    let activeMarkers = new Set();
+
+    function showAnimal(key) {
+      const a = ANIMALS[key];
+      document.getElementById('a-tag').textContent  = a.tag;
+      document.getElementById('a-name').textContent = a.name;
+      document.getElementById('a-sci').textContent  = a.sci;
+      document.getElementById('a-desc').textContent = a.desc;
+      infoPanel.classList.add('visible');
+      rippleEl.classList.remove('animate');
+      void rippleEl.offsetWidth;
+      rippleEl.classList.add('animate');
+    }
+
+    function hideAnimal() {
+      infoPanel.classList.remove('visible');
+    }
+
+    document.querySelector('a-scene').addEventListener('loaded', () => {
+      Object.entries(MARKER_MAP).forEach(([markerId, animalKey]) => {
+        const marker = document.getElementById(markerId);
+        if (!marker) return;
+        marker.addEventListener('markerFound', () => {
+          activeMarkers.add(animalKey);
+          showAnimal(animalKey);
+        });
+        marker.addEventListener('markerLost', () => {
+          activeMarkers.delete(animalKey);
+          if (activeMarkers.size === 0) hideAnimal();
+          else showAnimal([...activeMarkers].at(-1));
+        });
+      });
+    });
+
+    // Fuerza el video a pantalla completa
+    const fixVideo = () => {
+      const v = document.getElementById('arjs-video') || document.querySelector('video');
+      if (v) v.style.cssText = 'position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:1!important;';
+    };
+    [200, 500, 1000, 2000].forEach(t => setTimeout(fixVideo, t));
+  </script>
+</body>
+</html>
