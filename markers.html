@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Marcador AR · Museo Marino</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root { --deep:#020d18;--glow:#00c8ff;--accent:#00ffc8;--foam:#cceeff;--text:#d6f0ff; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--deep);color:var(--text);font-family:'Jost',sans-serif;font-weight:300;min-height:100vh;}
+    nav{display:flex;align-items:center;justify-content:space-between;padding:1.2rem 3rem;border-bottom:1px solid rgba(0,200,255,0.08);}
+    .nav-logo{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--foam);}
+    .nav-logo span{color:var(--glow);font-style:italic;}
+    nav a{color:var(--text);text-decoration:none;font-size:.78rem;letter-spacing:.15em;text-transform:uppercase;opacity:.6;transition:opacity .2s;}
+    nav a:hover{opacity:1;}
+
+    .page-header{text-align:center;padding:5rem 2rem 3rem;}
+    .eyebrow{font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;color:var(--glow);margin-bottom:1rem;}
+    h1{font-family:'Playfair Display',serif;font-size:clamp(2rem,5vw,3.5rem);color:#fff;margin-bottom:1rem;}
+    .subtitle{font-size:.9rem;opacity:.55;max-width:520px;margin:0 auto 2rem;line-height:1.8;}
+
+    .print-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.8rem 2rem;background:var(--glow);color:var(--deep);border:none;font-family:'Jost',sans-serif;font-size:.82rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));transition:transform .2s,box-shadow .2s;}
+    .print-btn:hover{transform:translateY(-2px);box-shadow:0 0 24px rgba(0,200,255,.4);}
+
+    .marker-center{max-width:500px;margin:3rem auto;padding:0 2rem;text-align:center;}
+    .marker-card{background:rgba(7,42,69,.3);border:1px solid rgba(0,200,255,.15);padding:3rem 2rem;clip-path:polygon(0 0,calc(100% - 20px) 0,100% 20px,100% 100%,20px 100%,0 calc(100% - 20px));margin-bottom:2rem;}
+
+    .marker-img-wrap{
+      width:240px;height:240px;
+      margin:0 auto 2rem;
+      background:#fff;
+      border:4px solid #000;
+      display:flex;align-items:center;justify-content:center;
+      overflow:hidden;
+    }
+    .marker-img-wrap img{width:100%;height:100%;object-fit:contain;display:block;}
+
+    .marker-card h2{font-family:'Playfair Display',serif;font-size:1.6rem;color:#fff;margin-bottom:.5rem;}
+    .marker-card p{font-size:.88rem;opacity:.55;line-height:1.7;}
+    .pattern-badge{display:inline-block;margin-top:1rem;padding:.4rem 1.2rem;border:1px solid rgba(0,200,255,.3);font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;color:var(--glow);}
+
+    .how-to{max-width:600px;margin:0 auto 2rem;padding:0 2rem;}
+    .how-to h3{font-family:'Playfair Display',serif;font-size:1.3rem;color:#fff;margin-bottom:1.5rem;text-align:center;}
+    .steps{display:flex;flex-direction:column;gap:.8rem;}
+    .step{display:flex;gap:1.2rem;align-items:flex-start;padding:1rem 1.2rem;background:rgba(7,42,69,.2);border-left:2px solid var(--glow);}
+    .step-num{font-family:'Playfair Display',serif;font-size:1.3rem;color:rgba(0,200,255,.35);flex-shrink:0;line-height:1;}
+    .step-text h4{font-size:.88rem;color:var(--foam);margin-bottom:.2rem;}
+    .step-text p{font-size:.8rem;opacity:.5;line-height:1.6;}
+
+    .animals-row{max-width:600px;margin:2rem auto 4rem;padding:0 2rem;text-align:center;}
+    .animals-row h3{font-family:'Playfair Display',serif;font-size:1.3rem;color:#fff;margin-bottom:1.5rem;}
+    .animals-chips{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:center;}
+    .chip{display:flex;align-items:center;gap:.5rem;padding:.5rem 1.2rem;background:rgba(7,42,69,.4);border:1px solid rgba(0,200,255,.15);font-size:.82rem;}
+
+    footer{padding:2rem 3rem;border-top:1px solid rgba(0,200,255,.08);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
+    footer .logo{font-family:'Playfair Display',serif;color:var(--foam);font-size:.95rem;}
+    footer .logo span{color:var(--glow);font-style:italic;}
+    footer p{font-size:.75rem;opacity:.3;}
+
+    @media print {
+      nav,.page-header .subtitle,.page-header .eyebrow,.how-to,.animals-row,footer,h1{display:none!important;}
+      body{background:white;}
+      .marker-card{border:none;background:white;clip-path:none;padding:0;}
+      .marker-card h2,.marker-card p{color:black;}
+      .pattern-badge{border-color:#000;color:#000;}
+      .print-btn{display:none!important;}
+      .marker-img-wrap{width:320px;height:320px;margin:0 auto 1rem;}
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-logo">Museo <span>Marino</span> AR</div>
+    <div style="display:flex;gap:2rem;">
+      <a href="index.html">← Inicio</a>
+      <a href="ar.html">Experiencia AR</a>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <p class="eyebrow">✦ Marcador único ✦</p>
+    <h1>Marcador HIRO</h1>
+    <p class="subtitle">Este es el único marcador que necesitas imprimir. Con él puedes ver los 5 animales — selecciona cuál quieres ver directamente en la app AR.</p>
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimir marcador</button>
+  </div>
+
+  <div class="marker-center">
+    <div class="marker-card">
+      <div class="marker-img-wrap">
+        <!-- Imagen oficial HIRO de AR.js — la misma que funcionaba antes -->
+        <img
+          src="https://jeromeetienne.github.io/AR.js/data/images/HIRO.jpg"
+          alt="Marcador HIRO oficial"
+          id="hiro-img"
+        />
+      </div>
+      <h2>Marcador HIRO</h2>
+      <p>Imprime este marcador en papel blanco. Funciona con los 5 animales del museo.</p>
+      <div class="pattern-badge">Patrón oficial AR.js</div>
+    </div>
+  </div>
+
+  <div class="how-to">
+    <h3>¿Cómo usarlo?</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-text">
+          <h4>Imprime este marcador</h4>
+          <p>Clic en "Imprimir marcador". Papel blanco, mínimo 10×10 cm. Cuanto más grande, mejor detección.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-text">
+          <h4>Abre la experiencia AR</h4>
+          <p>Desde tu celular abre ar.html. Espera a que la barra de carga llegue al 100%.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-text">
+          <h4>Elige el animal en la app</h4>
+          <p>Selecciona el animal con los botones de arriba en la pantalla AR.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-text">
+          <h4>Apunta al marcador impreso</h4>
+          <p>A 20–50 cm, buena iluminación, superficie plana. El animal aparece automáticamente.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="animals-row">
+    <h3>Animales disponibles</h3>
+    <div class="animals-chips">
+      <div class="chip">🦈 Tiburón Blanco</div>
+      <div class="chip">🐙 Pulpo Común</div>
+      <div class="chip">🐢 Tortuga Verde</div>
+      <div class="chip">🐠 Pez Payaso</div>
+      <div class="chip">🦀 Cangrejo Azul</div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="logo">Museo <span>Marino</span> AR</div>
+    <p>Marcador único · AR.js + A-Frame</p>
+  </footer>
+
+  <script>
+    // Si la imagen no carga, avisa al usuario
+    document.getElementById('hiro-img').onerror = function() {
+      this.parentElement.innerHTML = `
+        <div style="padding:1rem;text-align:center;color:#333;font-family:Arial,sans-serif;font-size:.8rem">
+          <strong style="display:block;margin-bottom:.5rem">Imagen no disponible offline</strong>
+          Necesitas conexión a internet para ver el marcador.<br><br>
+          O descárgala manualmente en:<br>
+          <span style="color:#0077cc">jeromeetienne.github.io/AR.js<br>/data/images/HIRO.jpg</span>
+        </div>`;
+    };
+  </script>
+</body>
+</html>
